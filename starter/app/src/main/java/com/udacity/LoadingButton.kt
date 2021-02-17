@@ -17,13 +17,21 @@ class LoadingButton @JvmOverloads constructor(
     private var widthSize = 0
     private var heightSize = 0
 
-    private val valueAnimator = ValueAnimator()
+    var currentPercentage: Float = 0F
+    var targetPercentage: Float = 0F
+
+    private var loadingAnimationListener: LoadingAnimationListener? = null
+
+    fun setLoadingAnimationListener(listener: LoadingAnimationListener) {
+        loadingAnimationListener = listener
+    }
 
     private var buttonState: ButtonState by Delegates.observable<ButtonState>(ButtonState.Completed) { p, old, new ->
 
     }
 
-    private val drawColor = ResourcesCompat.getColor(resources, R.color.colorPrimaryDark, null)
+    private val drawColor = ResourcesCompat.getColor(resources, R.color.colorPrimary, null)
+    private val drawColorDark = ResourcesCompat.getColor(resources, R.color.colorPrimaryDark, null)
 
     private val paint = Paint().apply {
         color = drawColor
@@ -31,7 +39,19 @@ class LoadingButton @JvmOverloads constructor(
         isAntiAlias = true
         // Dithering affects how colors with higher-precision than the device are down-sampled.
         isDither = true
-        style = Paint.Style.STROKE // default: FILL
+        style = Paint.Style.FILL // default: FILL
+        strokeJoin = Paint.Join.ROUND // default: MITER
+        strokeCap = Paint.Cap.ROUND // default: BUTT
+        strokeWidth = STROKE_WIDTH // default: Hairline-width (really thin)
+    }
+
+    private val paintDark = Paint().apply {
+        color = drawColorDark
+        // Smooths out edges of what is drawn without affecting shape.
+        isAntiAlias = true
+        // Dithering affects how colors with higher-precision than the device are down-sampled.
+        isDither = true
+        style = Paint.Style.FILL // default: FILL
         strokeJoin = Paint.Join.ROUND // default: MITER
         strokeCap = Paint.Cap.ROUND // default: BUTT
         strokeWidth = STROKE_WIDTH // default: Hairline-width (really thin)
@@ -40,7 +60,14 @@ class LoadingButton @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
-        canvas.drawCircle((width / 2).toFloat(), (height / 2).toFloat(), 50f, paint)
+        canvas.drawRect(0F, 0F, widthSize.toFloat(), heightSize.toFloat(), paint)
+        canvas.drawRect(
+            0F,
+            0F,
+            currentPercentage * widthSize / 100,
+            heightSize.toFloat(),
+            paintDark
+        )
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
@@ -54,5 +81,34 @@ class LoadingButton @JvmOverloads constructor(
         widthSize = w
         heightSize = h
         setMeasuredDimension(w, h)
+    }
+
+    fun updateProgress(percentage: Int) {
+        if (percentage <= 0) {
+            loadingAnimationListener?.onPartialAnimationComplete()
+            return
+        }
+
+        targetPercentage = percentage.toFloat()
+
+        println("mmmmm animating: current=$currentPercentage target=$targetPercentage")
+
+        ValueAnimator.ofFloat(currentPercentage, targetPercentage).apply {
+            duration = 1000
+            addUpdateListener {
+                currentPercentage = it.animatedValue as Float
+                println("mmmmm currentPercentage=$currentPercentage targetPercentage=$targetPercentage")
+                invalidate()
+
+                if (currentPercentage < 100F && currentPercentage >= targetPercentage) {
+                    loadingAnimationListener?.onPartialAnimationComplete()
+                }
+            }
+            start()
+        }
+    }
+
+    fun interface LoadingAnimationListener {
+        fun onPartialAnimationComplete()
     }
 }
