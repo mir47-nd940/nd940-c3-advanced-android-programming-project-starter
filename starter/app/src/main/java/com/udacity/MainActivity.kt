@@ -46,7 +46,6 @@ class MainActivity : AppCompatActivity() {
         }
 
         viewModel.status.observe(this) {
-            println("mmmmm MainActivity: status=$it")
             when (it) {
                 is DownloadStatus.Pending -> {
                 }
@@ -92,7 +91,7 @@ class MainActivity : AppCompatActivity() {
         val downloadManager = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
         // enqueue puts the download request in the queue.
         downloadID = downloadManager.enqueue(request)
-        viewModel.updateDownloadStatus(downloadID, downloadManager)
+        viewModel.pollDownloadStatus(downloadID, downloadManager)
     }
 
     companion object {

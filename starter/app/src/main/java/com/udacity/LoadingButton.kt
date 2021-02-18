@@ -3,6 +3,7 @@ package com.udacity
 import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Paint
 import android.util.AttributeSet
 import android.view.View
@@ -14,59 +15,81 @@ private const val STROKE_WIDTH = 12f
 class LoadingButton @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
-    private var widthSize = 0
-    private var heightSize = 0
+    private var _widthSize = 0
+    private var _heightSize = 0
+    private var _textSize = 50F
+    private var _text = context.getString(R.string.button_name)
 
-    var currentPercentage: Float = 0F
-    var targetPercentage: Float = 0F
+    private var _currentPercentage: Float = 0F
+    private var _targetPercentage: Float = 0F
 
-    private var loadingAnimationListener: LoadingAnimationListener? = null
+    private var _loadingAnimationListener: LoadingAnimationListener? = null
 
     fun setLoadingAnimationListener(listener: LoadingAnimationListener) {
-        loadingAnimationListener = listener
+        _loadingAnimationListener = listener
     }
 
-    private var buttonState: ButtonState by Delegates.observable<ButtonState>(ButtonState.Completed) { p, old, new ->
-
+    private var _buttonState: ButtonState by Delegates.observable(ButtonState.Completed) { _, _, new ->
+        when (new) {
+            ButtonState.Clicked -> _text = context.getString(R.string.button_name)
+            ButtonState.Loading -> _text = context.getString(R.string.button_loading)
+            ButtonState.Completed -> {
+                _text = context.getString(R.string.button_name)
+                _currentPercentage = 0F
+                _targetPercentage = 0F
+            }
+        }
+        invalidate()
     }
 
-    private val drawColor = ResourcesCompat.getColor(resources, R.color.colorPrimary, null)
-    private val drawColorDark = ResourcesCompat.getColor(resources, R.color.colorPrimaryDark, null)
+    private val _drawColor = ResourcesCompat.getColor(resources, R.color.colorPrimary, null)
+    private val _drawColorDark = ResourcesCompat.getColor(resources, R.color.colorPrimaryDark, null)
 
-    private val paint = Paint().apply {
-        color = drawColor
-        // Smooths out edges of what is drawn without affecting shape.
+    private val _paint = Paint().apply {
+        color = _drawColor
         isAntiAlias = true
-        // Dithering affects how colors with higher-precision than the device are down-sampled.
         isDither = true
-        style = Paint.Style.FILL // default: FILL
-        strokeJoin = Paint.Join.ROUND // default: MITER
-        strokeCap = Paint.Cap.ROUND // default: BUTT
-        strokeWidth = STROKE_WIDTH // default: Hairline-width (really thin)
+        style = Paint.Style.FILL
+        strokeJoin = Paint.Join.ROUND
+        strokeCap = Paint.Cap.ROUND
+        strokeWidth = STROKE_WIDTH
     }
 
-    private val paintDark = Paint().apply {
-        color = drawColorDark
-        // Smooths out edges of what is drawn without affecting shape.
+    private val _paintDark = Paint().apply {
+        color = _drawColorDark
         isAntiAlias = true
-        // Dithering affects how colors with higher-precision than the device are down-sampled.
         isDither = true
-        style = Paint.Style.FILL // default: FILL
-        strokeJoin = Paint.Join.ROUND // default: MITER
-        strokeCap = Paint.Cap.ROUND // default: BUTT
-        strokeWidth = STROKE_WIDTH // default: Hairline-width (really thin)
+        style = Paint.Style.FILL
+        strokeJoin = Paint.Join.ROUND
+        strokeCap = Paint.Cap.ROUND
+        strokeWidth = STROKE_WIDTH
+    }
+
+    private val _paintWhite = Paint().apply {
+        color = Color.WHITE
+        style = Paint.Style.FILL
+        textSize = _textSize
+        textAlign = Paint.Align.CENTER
     }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
-        canvas.drawRect(0F, 0F, widthSize.toFloat(), heightSize.toFloat(), paint)
+        canvas.drawRect(0F, 0F, _widthSize.toFloat(), _heightSize.toFloat(), _paint)
+
         canvas.drawRect(
             0F,
             0F,
-            currentPercentage * widthSize / 100,
-            heightSize.toFloat(),
-            paintDark
+            _currentPercentage * _widthSize / 100,
+            _heightSize.toFloat(),
+            _paintDark
+        )
+
+        canvas.drawText(
+            _text,
+            _widthSize / 2F,
+            (_heightSize + _textSize) / 2,
+            _paintWhite
         )
     }
 
@@ -78,33 +101,44 @@ class LoadingButton @JvmOverloads constructor(
             heightMeasureSpec,
             0
         )
-        widthSize = w
-        heightSize = h
+        _widthSize = w
+        _heightSize = h
         setMeasuredDimension(w, h)
+    }
+
+    override fun performClick(): Boolean {
+        _buttonState = when (_buttonState) {
+            ButtonState.Completed -> ButtonState.Clicked
+            else -> _buttonState
+        }
+        return super.performClick()
     }
 
     fun updateProgress(percentage: Int) {
         if (percentage <= 0) {
-            loadingAnimationListener?.onPartialAnimationComplete()
+            _loadingAnimationListener?.onPartialAnimationComplete()
             return
         }
 
-        targetPercentage = percentage.toFloat()
+        _targetPercentage = percentage.toFloat()
 
-        println("mmmmm animating: current=$currentPercentage target=$targetPercentage")
-
-        ValueAnimator.ofFloat(currentPercentage, targetPercentage).apply {
+        ValueAnimator.ofFloat(_currentPercentage, _targetPercentage).apply {
             duration = 1000
             addUpdateListener {
-                currentPercentage = it.animatedValue as Float
-                println("mmmmm currentPercentage=$currentPercentage targetPercentage=$targetPercentage")
+                _currentPercentage = it.animatedValue as Float
                 invalidate()
 
-                if (currentPercentage < 100F && currentPercentage >= targetPercentage) {
-                    loadingAnimationListener?.onPartialAnimationComplete()
+                if (_currentPercentage >= 100F) {
+                    _buttonState = ButtonState.Completed
+                    return@addUpdateListener
+                }
+
+                if (_currentPercentage >= _targetPercentage) {
+                    _loadingAnimationListener?.onPartialAnimationComplete()
                 }
             }
             start()
+            _buttonState = ButtonState.Loading
         }
     }
 
