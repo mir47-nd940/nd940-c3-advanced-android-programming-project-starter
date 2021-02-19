@@ -17,7 +17,7 @@ class LoadingButton @JvmOverloads constructor(
 ) : View(context, attrs, defStyleAttr) {
     private var _widthSize = 0
     private var _heightSize = 0
-    private var _textSize = 50F
+    private var _textSize = 60F
     private var _text = context.getString(R.string.button_name)
 
     private var _currentPercentage: Float = 0F
@@ -31,7 +31,7 @@ class LoadingButton @JvmOverloads constructor(
 
     private var _buttonState: ButtonState by Delegates.observable(ButtonState.Completed) { _, _, new ->
         when (new) {
-            ButtonState.Clicked -> _text = context.getString(R.string.button_name)
+            ButtonState.Clicked -> _text = context.getString(R.string.button_loading)
             ButtonState.Loading -> _text = context.getString(R.string.button_loading)
             ButtonState.Completed -> {
                 _text = context.getString(R.string.button_name)
