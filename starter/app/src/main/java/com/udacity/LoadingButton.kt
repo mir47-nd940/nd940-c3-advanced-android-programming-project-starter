@@ -5,7 +5,7 @@ import android.content.Context
 import android.graphics.*
 import android.util.AttributeSet
 import android.view.View
-import androidx.core.content.res.ResourcesCompat
+import androidx.core.content.withStyledAttributes
 import kotlin.properties.Delegates
 
 private const val STROKE_WIDTH = 12f
@@ -23,7 +23,11 @@ class LoadingButton @JvmOverloads constructor(
     private var _targetPercentage: Float = 0F
     private var _loadingAnimationListener: LoadingAnimationListener? = null
     private var _textActiveWidth = 0
-    private lateinit var _loadingCircle: RectF
+    private var _loadingCircle = RectF()
+    private var loadingBackgroundColor = 0
+    private var loadingProgressColor = 0
+    private var loadingCircleColor = 0
+    private val bounds = Rect()
 
     fun setLoadingAnimationListener(listener: LoadingAnimationListener) {
         _loadingAnimationListener = listener
@@ -42,74 +46,35 @@ class LoadingButton @JvmOverloads constructor(
         invalidate()
     }
 
-    private val _drawColor = ResourcesCompat.getColor(resources, R.color.colorPrimary, null)
-    private val _drawColorDark = ResourcesCompat.getColor(resources, R.color.colorPrimaryDark, null)
-    private val _drawColorAccent = ResourcesCompat.getColor(resources, R.color.colorAccent, null)
-
     private val _paint = Paint().apply {
-        color = _drawColor
         isAntiAlias = true
         isDither = true
         style = Paint.Style.FILL
         strokeJoin = Paint.Join.ROUND
         strokeCap = Paint.Cap.ROUND
         strokeWidth = STROKE_WIDTH
-    }
-
-    private val _paintDark = Paint().apply {
-        color = _drawColorDark
-        isAntiAlias = true
-        isDither = true
-        style = Paint.Style.FILL
-        strokeJoin = Paint.Join.ROUND
-        strokeCap = Paint.Cap.ROUND
-        strokeWidth = STROKE_WIDTH
-    }
-
-    private val _paintAccent = Paint().apply {
-        color = _drawColorAccent
-        isAntiAlias = true
-        isDither = true
-        style = Paint.Style.FILL
-        strokeJoin = Paint.Join.ROUND
-        strokeCap = Paint.Cap.ROUND
-        strokeWidth = STROKE_WIDTH
-    }
-
-    private val _paintText = Paint().apply {
-        color = Color.WHITE
-        style = Paint.Style.FILL
         textSize = _textSize
         textAlign = Paint.Align.CENTER
     }
 
+    init {
+        context.withStyledAttributes(attrs, R.styleable.LoadingButton) {
+            loadingBackgroundColor = getColor(R.styleable.LoadingButton_loadingBackgroundColor, 0)
+            loadingProgressColor = getColor(R.styleable.LoadingButton_loadingProgressColor, 0)
+            loadingCircleColor = getColor(R.styleable.LoadingButton_loadingCircleColor, 0)
+        }
+    }
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-
+        _paint.color = loadingBackgroundColor
         canvas.drawRect(0F, 0F, _widthSize.toFloat(), _heightSize.toFloat(), _paint)
-
-        canvas.drawRect(
-            0F,
-            0F,
-            _currentPercentage * _widthSize / 100,
-            _heightSize.toFloat(),
-            _paintDark
-        )
-
-        canvas.drawText(
-            _textDisplay,
-            _widthSize / 2F,
-            (_heightSize + _textSize) / 2,
-            _paintText
-        )
-
-        canvas.drawArc(
-            _loadingCircle,
-            0F,
-            _currentPercentage * 360 / 100,
-            true,
-            _paintAccent
-        )
+        _paint.color = loadingProgressColor
+        canvas.drawRect(0F, 0F, _currentPercentage * _widthSize / 100, _heightSize.toFloat(), _paint)
+        _paint.color = loadingCircleColor
+        canvas.drawArc(_loadingCircle, 0F, _currentPercentage * 360 / 100, true, _paint)
+        _paint.color = Color.WHITE
+        canvas.drawText(_textDisplay, _widthSize / 2F, (_heightSize + _textSize) / 2, _paint)
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
@@ -122,20 +87,16 @@ class LoadingButton @JvmOverloads constructor(
         )
         _widthSize = w
         _heightSize = h
+        setMeasuredDimension(w, h)
 
-        val bounds = Rect()
-        _paintText.getTextBounds(_textActive, 0, _textActive.length, bounds)
+        _paint.getTextBounds(_textActive, 0, _textActive.length, bounds)
         _textActiveWidth = bounds.width()
         val offset = _textActiveWidth + ((_widthSize - _textActiveWidth) / 2F)
         val quarterHeight = _heightSize / 4F
-        _loadingCircle = RectF(
-            offset,
-            quarterHeight,
-            offset + (quarterHeight * 2),
-            quarterHeight * 3
-        )
-
-        setMeasuredDimension(w, h)
+        _loadingCircle.left = offset
+        _loadingCircle.top = quarterHeight
+        _loadingCircle.right = offset + (quarterHeight * 2)
+        _loadingCircle.bottom = quarterHeight * 3
     }
 
     override fun performClick(): Boolean {
@@ -146,11 +107,11 @@ class LoadingButton @JvmOverloads constructor(
         return super.performClick()
     }
 
-    fun updateProgress(percentage: Int) {
+    fun animateTo(percentage: Int) {
         _buttonState = ButtonState.Loading
 
         if (percentage.toFloat() == _targetPercentage) {
-            _loadingAnimationListener?.onPartialAnimationComplete()
+            _loadingAnimationListener?.onTargetReached()
             return
         }
 
@@ -168,7 +129,7 @@ class LoadingButton @JvmOverloads constructor(
                 }
 
                 if (_currentPercentage >= _targetPercentage) {
-                    _loadingAnimationListener?.onPartialAnimationComplete()
+                    _loadingAnimationListener?.onTargetReached()
                 }
             }
             start()
@@ -176,6 +137,6 @@ class LoadingButton @JvmOverloads constructor(
     }
 
     fun interface LoadingAnimationListener {
-        fun onPartialAnimationComplete()
+        fun onTargetReached()
     }
 }

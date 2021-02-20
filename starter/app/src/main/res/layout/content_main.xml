@@ -25,6 +25,9 @@
         android:layout_width="0dp"
         android:layout_height="@dimen/button_height"
         android:layout_margin="@dimen/spacing_normal"
+        app:loadingBackgroundColor="@color/colorPrimary"
+        app:loadingProgressColor="@color/colorPrimaryDark"
+        app:loadingCircleColor="@color/colorAccent"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
