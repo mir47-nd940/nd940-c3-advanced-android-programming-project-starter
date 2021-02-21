@@ -6,6 +6,10 @@
     <string name="notification_title">Udacity: Android Kotlin Nanodegree </string>
     <string name="notification_description">The Project 3 repository is downloaded</string>
     <string name="notification_button">See changes</string>
+    <string name="download_notification_channel_name">Download</string>
+    <string name="download_notification_channel_description">Download Channel Description</string>
+    <string name="download_notification_channel_id" translatable="false">download_channel_id</string>
+    <string name="notification_action_title">Check the status</string>
 
     <string name="button_name">Download</string>
     <string name="button_loading">We are loading</string>

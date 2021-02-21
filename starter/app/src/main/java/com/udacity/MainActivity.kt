@@ -1,27 +1,25 @@
 package com.udacity
 
 import android.app.DownloadManager
+import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.graphics.Color
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import com.udacity.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
 
     private var downloadID: Long = 0
-
-    private lateinit var notificationManager: NotificationManager
-    private lateinit var pendingIntent: PendingIntent
-    private lateinit var action: NotificationCompat.Action
 
     private var _binding: ActivityMainBinding? = null
     private val binding get() = _binding!!
@@ -35,6 +33,8 @@ class MainActivity : AppCompatActivity() {
         setSupportActionBar(binding.toolbar)
 
         registerReceiver(receiver, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE))
+
+        createNotificationChannel()
 
         binding.content.customButton.setLoadingAnimationListener {
             val downloadManager = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
@@ -55,17 +55,18 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        viewModel.status.observe(this) {
+        viewModel.downloadStatus.observe(this) {
             when (it) {
                 is DownloadStatus.Pending -> {
                 }
                 is DownloadStatus.Running -> {
-                     binding.content.customButton.updateProgress(it.progress)
+                    binding.content.customButton.animateTo(it.progress)
                 }
                 is DownloadStatus.Paused -> {
+                    binding.content.customButton.isEnabled = true
                 }
                 is DownloadStatus.Successful -> {
-                    binding.content.customButton.updateProgress(100)
+                    binding.content.customButton.animateTo(100)
                     binding.content.customButton.isEnabled = true
                 }
                 is DownloadStatus.Failed -> {
@@ -74,6 +75,7 @@ class MainActivity : AppCompatActivity() {
                 is DownloadStatus.Cancelled -> {
                     binding.content.customButton.isEnabled = true
                 }
+                DownloadStatus.None -> { }
             }
         }
     }
@@ -86,6 +88,17 @@ class MainActivity : AppCompatActivity() {
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             val id = intent?.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)
+            if (id == downloadID) {
+                val notificationManager = ContextCompat.getSystemService(
+                    applicationContext,
+                    NotificationManager::class.java
+                ) as NotificationManager
+
+                notificationManager.sendNotification(
+                    getString(R.string.notification_description),
+                    applicationContext
+                )
+            }
         }
     }
 
@@ -97,20 +110,39 @@ class MainActivity : AppCompatActivity() {
                 .setRequiresCharging(false)
                 .setAllowedOverMetered(true)
                 .setAllowedOverRoaming(true)
+                .setNotificationVisibility(DownloadManager.Request.VISIBILITY_HIDDEN)
 
         val downloadManager = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
         // enqueue puts the download request in the queue.
         downloadID = downloadManager.enqueue(request)
-        viewModel.pollDownloadStatus(downloadID, downloadManager)
+        viewModel.pollDownloadStatusPending(downloadID, downloadManager)
+    }
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val notificationChannel = NotificationChannel(
+                getString(R.string.download_notification_channel_id),
+                getString(R.string.download_notification_channel_name),
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply { setShowBadge(false) }
+
+            notificationChannel.enableLights(true)
+            notificationChannel.lightColor = Color.BLUE
+            notificationChannel.enableVibration(true)
+            notificationChannel.description =
+                getString(R.string.download_notification_channel_description)
+
+            val notificationManager = getSystemService(NotificationManager::class.java)
+            notificationManager.createNotificationChannel(notificationChannel)
+        }
     }
 
     companion object {
         private const val URL_GLIDE =
-            "https://github.com/bumptech/glide/archive/master.zip"
+            "https://github.com/bumptech/glide/releases/download/v3.6.0/glide-3.6.0.jar"
         private const val URL_LOADAPP =
             "https://github.com/udacity/nd940-c3-advanced-android-programming-project-starter/archive/master.zip"
         private const val URL_RETROFIT =
-            "https://github.com/square/retrofit/archive/master.zip"
-        private const val CHANNEL_ID = "channelId"
+            "https://search.maven.org/remote_content?g=com.squareup.retrofit2&a=retrofit&v=LATEST"
     }
 }

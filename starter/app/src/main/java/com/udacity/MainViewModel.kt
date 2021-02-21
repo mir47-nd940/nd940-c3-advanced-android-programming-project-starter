@@ -10,8 +10,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.*
 import kotlin.concurrent.schedule
+import kotlin.properties.Delegates
 
 sealed class DownloadStatus {
+    object None : DownloadStatus()
     object Pending : DownloadStatus()
     data class Running(val progress: Int) : DownloadStatus()
     object Paused : DownloadStatus()
@@ -22,36 +24,43 @@ sealed class DownloadStatus {
 
 class MainViewModel : ViewModel() {
 
-    private val _status = MutableLiveData<DownloadStatus>()
-    val status: LiveData<DownloadStatus>
-        get() = _status
+    private var downloadStatusDelegate: DownloadStatus by Delegates.observable(DownloadStatus.None) { _, old, new ->
+        if (old != new || new is DownloadStatus.Running) {
+            _downloadStatus.postValue(new)
+        }
+    }
 
-    fun pollDownloadStatus(downloadID: Long, downloadManager: DownloadManager) {
+    private val _downloadStatus = MutableLiveData<DownloadStatus>()
+    val downloadStatus: LiveData<DownloadStatus>
+        get() = _downloadStatus
+
+    fun pollDownloadStatusPending(downloadID: Long, downloadManager: DownloadManager) {
         CoroutineScope(Dispatchers.IO).launch {
-            Timer("DownloadStatusTimer", false).schedule(500, 500) {
+            Timer("DownloadStatusPendingTimer", false).schedule(500, 500) {
                 val query = DownloadManager.Query()
                 query.setFilterById(downloadID)
                 val cursor: Cursor = downloadManager.query(query)
                 if (cursor.moveToFirst()) {
-                    when (cursor.getInt(cursor.getColumnIndex(DownloadManager.COLUMN_STATUS))) {
+                    val status = cursor.getInt(cursor.getColumnIndex(DownloadManager.COLUMN_STATUS))
+                    when (status) {
                         DownloadManager.STATUS_PENDING -> {
-//                            _status.postValue(DownloadStatus.Pending)
+                            downloadStatusDelegate = DownloadStatus.Pending
                         }
                         DownloadManager.STATUS_RUNNING -> {
-                            _status.postValue(DownloadStatus.Running(0))
+                            downloadStatusDelegate = DownloadStatus.Running(0)
                             cancel()
                         }
                         DownloadManager.STATUS_PAUSED -> {
                             downloadManager.remove(downloadID)
-                            _status.postValue(DownloadStatus.Cancelled)
+                            downloadStatusDelegate = DownloadStatus.Cancelled
                             cancel()
                         }
                         DownloadManager.STATUS_SUCCESSFUL -> {
-                            _status.postValue(DownloadStatus.Successful)
+                            downloadStatusDelegate = DownloadStatus.Successful
                             cancel()
                         }
                         DownloadManager.STATUS_FAILED -> {
-                            _status.postValue(DownloadStatus.Failed)
+                            downloadStatusDelegate = DownloadStatus.Failed
                             cancel()
                         }
                     }
@@ -68,7 +77,7 @@ class MainViewModel : ViewModel() {
             if (cursor.moveToFirst()) {
                 when (cursor.getInt(cursor.getColumnIndex(DownloadManager.COLUMN_STATUS))) {
                     DownloadManager.STATUS_PENDING -> {
-                        _status.postValue(DownloadStatus.Pending)
+                        downloadStatusDelegate = DownloadStatus.Pending
                     }
                     DownloadManager.STATUS_RUNNING -> {
                         val total =
@@ -79,17 +88,16 @@ class MainViewModel : ViewModel() {
                                 cursor.getLong(cursor.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
                             progress = (downloaded * 100L / total).toInt()
                         }
-                        _status.postValue(DownloadStatus.Running(progress))
+                        downloadStatusDelegate = DownloadStatus.Running(progress)
                     }
                     DownloadManager.STATUS_PAUSED -> {
-                        downloadManager.remove(downloadID)
-                        _status.postValue(DownloadStatus.Cancelled)
+                        downloadStatusDelegate = DownloadStatus.Paused
                     }
                     DownloadManager.STATUS_SUCCESSFUL -> {
-                        _status.postValue(DownloadStatus.Successful)
+                        downloadStatusDelegate = DownloadStatus.Successful
                     }
                     DownloadManager.STATUS_FAILED -> {
-                        _status.postValue(DownloadStatus.Failed)
+                        downloadStatusDelegate = DownloadStatus.Failed
                     }
                 }
             }
