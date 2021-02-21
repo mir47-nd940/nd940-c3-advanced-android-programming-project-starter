@@ -20,6 +20,7 @@ import com.udacity.databinding.ActivityMainBinding
 class MainActivity : AppCompatActivity() {
 
     private var downloadID: Long = 0
+    private var downloadName: String = ""
 
     private var _binding: ActivityMainBinding? = null
     private val binding get() = _binding!!
@@ -43,13 +44,14 @@ class MainActivity : AppCompatActivity() {
 
         binding.content.customButton.setOnClickListener {
             when (binding.content.radioGroup.checkedRadioButtonId) {
-                R.id.radio_glide -> URL_GLIDE
-                R.id.radio_loadapp -> URL_LOADAPP
-                R.id.radio_retrofit -> URL_RETROFIT
+                R.id.radio_glide -> Pair(URL_GLIDE, getString(R.string.button_glide))
+                R.id.radio_loadapp -> Pair(URL_LOADAPP, getString(R.string.button_loadapp))
+                R.id.radio_retrofit -> Pair(URL_RETROFIT, getString(R.string.button_retrofit))
                 else -> null
             }?.let {
                 binding.content.customButton.isEnabled = false
-                download(it)
+                download(it.first)
+                downloadName = it.second
             } ?: run {
                 Toast.makeText(this, getString(R.string.select_file), Toast.LENGTH_SHORT).show()
             }
@@ -75,7 +77,8 @@ class MainActivity : AppCompatActivity() {
                 is DownloadStatus.Cancelled -> {
                     binding.content.customButton.isEnabled = true
                 }
-                DownloadStatus.None -> { }
+                DownloadStatus.None -> {
+                }
             }
         }
     }
@@ -94,8 +97,20 @@ class MainActivity : AppCompatActivity() {
                     NotificationManager::class.java
                 ) as NotificationManager
 
+                val downloadManager = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
+                val status = when (viewModel.getDownloadStatus(id, downloadManager)) {
+                    DownloadStatus.None -> getString(R.string.download_status_none)
+                    DownloadStatus.Pending -> getString(R.string.download_status_pending)
+                    is DownloadStatus.Running -> getString(R.string.download_status_running)
+                    DownloadStatus.Paused -> getString(R.string.download_status_paused)
+                    DownloadStatus.Successful -> getString(R.string.download_status_successful)
+                    DownloadStatus.Failed -> getString(R.string.download_status_failed)
+                    DownloadStatus.Cancelled -> getString(R.string.download_status_cancelled)
+                }
                 notificationManager.sendNotification(
                     getString(R.string.notification_description),
+                    downloadName,
+                    status,
                     applicationContext
                 )
             }

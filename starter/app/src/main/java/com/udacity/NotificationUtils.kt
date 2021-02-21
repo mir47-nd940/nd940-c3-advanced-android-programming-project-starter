@@ -8,15 +8,24 @@ import androidx.core.app.NotificationCompat
 
 private val NOTIFICATION_ID = 0
 private val REQUEST_CODE = 0
-private val FLAGS = 0
 
-fun NotificationManager.sendNotification(messageBody: String, applicationContext: Context) {
+const val EXTRA_DOWNLOAD_FILE_NAME = "download_file_name"
+const val EXTRA_DOWNLOAD_STATUS = "download_status"
+
+fun NotificationManager.sendNotification(
+    messageBody: String,
+    downloadFileName: String,
+    downloadStatus: String,
+    applicationContext: Context,
+) {
     val intent = Intent(applicationContext, DetailActivity::class.java)
+    intent.putExtra(EXTRA_DOWNLOAD_FILE_NAME, downloadFileName)
+    intent.putExtra(EXTRA_DOWNLOAD_STATUS, downloadStatus)
     val pendingIntent: PendingIntent = PendingIntent.getActivity(
         applicationContext,
         REQUEST_CODE,
         intent,
-        FLAGS
+        PendingIntent.FLAG_UPDATE_CURRENT
     )
 
     val builder = NotificationCompat.Builder(

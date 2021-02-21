@@ -11,5 +11,12 @@ class DetailActivity : AppCompatActivity() {
         val binding = ActivityDetailBinding.inflate(layoutInflater)
         setContentView(binding.root)
         setSupportActionBar(binding.toolbar)
+
+        binding.detailContent.textFileName.text = intent.getStringExtra(EXTRA_DOWNLOAD_FILE_NAME)
+        binding.detailContent.textStatus.text = intent.getStringExtra(EXTRA_DOWNLOAD_STATUS)
+
+        binding.detailContent.buttonOk.setOnClickListener {
+            onBackPressed()
+        }
     }
 }

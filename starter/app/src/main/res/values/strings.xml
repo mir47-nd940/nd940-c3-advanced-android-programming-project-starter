@@ -19,4 +19,14 @@
     <string name="button_glide">Glide - Image Loading Library by BumpTech</string>
     <string name="button_loadapp">LoadApp - Current repository by Udacity</string>
     <string name="button_retrofit">Retrofit - Type-safe HTTP client for Android and Java by Square, Inc</string>
+    <string name="label_file_name">File name:</string>
+    <string name="label_status">Status:</string>
+    <string name="label_button_detail">OK</string>
+    <string name="download_status_successful">Successful</string>
+    <string name="download_status_failed">Failed</string>
+    <string name="download_status_cancelled">Cancelled</string>
+    <string name="download_status_pending">Pending</string>
+    <string name="download_status_none">None</string>
+    <string name="download_status_running">Running</string>
+    <string name="download_status_paused">Paused</string>
 </resources>

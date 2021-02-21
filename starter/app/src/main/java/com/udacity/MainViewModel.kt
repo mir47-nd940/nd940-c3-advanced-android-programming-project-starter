@@ -37,33 +37,19 @@ class MainViewModel : ViewModel() {
     fun pollDownloadStatusPending(downloadID: Long, downloadManager: DownloadManager) {
         CoroutineScope(Dispatchers.IO).launch {
             Timer("DownloadStatusPendingTimer", false).schedule(500, 500) {
-                val query = DownloadManager.Query()
-                query.setFilterById(downloadID)
-                val cursor: Cursor = downloadManager.query(query)
-                if (cursor.moveToFirst()) {
-                    val status = cursor.getInt(cursor.getColumnIndex(DownloadManager.COLUMN_STATUS))
-                    when (status) {
-                        DownloadManager.STATUS_PENDING -> {
-                            downloadStatusDelegate = DownloadStatus.Pending
-                        }
-                        DownloadManager.STATUS_RUNNING -> {
-                            downloadStatusDelegate = DownloadStatus.Running(0)
-                            cancel()
-                        }
-                        DownloadManager.STATUS_PAUSED -> {
-                            downloadManager.remove(downloadID)
-                            downloadStatusDelegate = DownloadStatus.Cancelled
-                            cancel()
-                        }
-                        DownloadManager.STATUS_SUCCESSFUL -> {
-                            downloadStatusDelegate = DownloadStatus.Successful
-                            cancel()
-                        }
-                        DownloadManager.STATUS_FAILED -> {
-                            downloadStatusDelegate = DownloadStatus.Failed
-                            cancel()
-                        }
+                val status = getDownloadStatus(downloadID, downloadManager)
+                downloadStatusDelegate = status
+                when (status) {
+                    DownloadStatus.None,
+                    DownloadStatus.Pending,
+                    -> {
                     }
+                    is DownloadStatus.Running,
+                    DownloadStatus.Paused,
+                    DownloadStatus.Successful,
+                    DownloadStatus.Failed,
+                    DownloadStatus.Cancelled,
+                    -> cancel()
                 }
             }
         }
@@ -71,36 +57,34 @@ class MainViewModel : ViewModel() {
 
     fun updateDownloadStatus(downloadID: Long, downloadManager: DownloadManager) {
         CoroutineScope(Dispatchers.IO).launch {
-            val query = DownloadManager.Query()
-            query.setFilterById(downloadID)
-            val cursor: Cursor = downloadManager.query(query)
-            if (cursor.moveToFirst()) {
-                when (cursor.getInt(cursor.getColumnIndex(DownloadManager.COLUMN_STATUS))) {
-                    DownloadManager.STATUS_PENDING -> {
-                        downloadStatusDelegate = DownloadStatus.Pending
+            downloadStatusDelegate = (getDownloadStatus(downloadID, downloadManager))
+        }
+    }
+
+    fun getDownloadStatus(downloadID: Long, downloadManager: DownloadManager): DownloadStatus {
+        val query = DownloadManager.Query()
+        query.setFilterById(downloadID)
+        val cursor: Cursor = downloadManager.query(query)
+        if (cursor.moveToFirst()) {
+            return when (cursor.getInt(cursor.getColumnIndex(DownloadManager.COLUMN_STATUS))) {
+                DownloadManager.STATUS_PENDING -> DownloadStatus.Pending
+                DownloadManager.STATUS_RUNNING -> {
+                    val total =
+                        cursor.getLong(cursor.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
+                    var progress = 0
+                    if (total >= 0) {
+                        val downloaded =
+                            cursor.getLong(cursor.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
+                        progress = (downloaded * 100L / total).toInt()
                     }
-                    DownloadManager.STATUS_RUNNING -> {
-                        val total =
-                            cursor.getLong(cursor.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
-                        var progress = 0
-                        if (total >= 0) {
-                            val downloaded =
-                                cursor.getLong(cursor.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
-                            progress = (downloaded * 100L / total).toInt()
-                        }
-                        downloadStatusDelegate = DownloadStatus.Running(progress)
-                    }
-                    DownloadManager.STATUS_PAUSED -> {
-                        downloadStatusDelegate = DownloadStatus.Paused
-                    }
-                    DownloadManager.STATUS_SUCCESSFUL -> {
-                        downloadStatusDelegate = DownloadStatus.Successful
-                    }
-                    DownloadManager.STATUS_FAILED -> {
-                        downloadStatusDelegate = DownloadStatus.Failed
-                    }
+                    DownloadStatus.Running(progress)
                 }
+                DownloadManager.STATUS_PAUSED -> DownloadStatus.Paused
+                DownloadManager.STATUS_SUCCESSFUL -> DownloadStatus.Successful
+                DownloadManager.STATUS_FAILED -> DownloadStatus.Failed
+                else -> DownloadStatus.None
             }
         }
+        return DownloadStatus.None
     }
 }
