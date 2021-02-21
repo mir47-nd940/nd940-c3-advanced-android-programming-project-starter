@@ -48,3 +48,7 @@ fun NotificationManager.sendNotification(
 
     notify(NOTIFICATION_ID, builder.build())
 }
+
+fun NotificationManager.cancelNotifications() {
+    cancelAll()
+}

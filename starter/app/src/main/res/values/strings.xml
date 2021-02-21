@@ -23,7 +23,7 @@
     <string name="label_status">Status:</string>
     <string name="label_button_detail">OK</string>
     <string name="download_status_successful">Successful</string>
-    <string name="download_status_failed">Failed</string>
+    <string name="download_status_failed">Fail</string>
     <string name="download_status_cancelled">Cancelled</string>
     <string name="download_status_pending">Pending</string>
     <string name="download_status_none">None</string>
