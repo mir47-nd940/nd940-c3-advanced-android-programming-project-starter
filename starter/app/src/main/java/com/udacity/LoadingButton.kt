@@ -29,11 +29,7 @@ class LoadingButton @JvmOverloads constructor(
     private var loadingCircleColor = 0
     private val bounds = Rect()
 
-    fun setLoadingAnimationListener(listener: LoadingAnimationListener) {
-        loadingAnimationListener = listener
-    }
-
-    private var buttonState: ButtonState by Delegates.observable(ButtonState.Completed) { _, _, new ->
+    private var buttonState: ButtonState by Delegates.observable(ButtonState.Completed) { p, old, new ->
         when (new) {
             ButtonState.Clicked -> textDisplay = textActive
             ButtonState.Loading -> textDisplay = textActive
@@ -138,6 +134,10 @@ class LoadingButton @JvmOverloads constructor(
 
     fun reset() {
         buttonState = ButtonState.Completed
+    }
+
+    fun setLoadingAnimationListener(listener: LoadingAnimationListener) {
+        loadingAnimationListener = listener
     }
 
     fun interface LoadingAnimationListener {
