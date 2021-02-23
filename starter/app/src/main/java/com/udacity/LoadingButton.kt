@@ -35,7 +35,7 @@ class LoadingButton @JvmOverloads constructor(
 
     private var _buttonState: ButtonState by Delegates.observable(ButtonState.Completed) { _, _, new ->
         when (new) {
-            ButtonState.Clicked -> textDisplay = textInactive
+            ButtonState.Clicked -> textDisplay = textActive
             ButtonState.Loading -> textDisplay = textActive
             ButtonState.Completed -> {
                 textDisplay = textInactive
@@ -134,6 +134,10 @@ class LoadingButton @JvmOverloads constructor(
             }
             start()
         }
+    }
+
+    fun reset() {
+        _buttonState = ButtonState.Completed
     }
 
     fun interface LoadingAnimationListener {
