@@ -33,7 +33,7 @@ class LoadingButton @JvmOverloads constructor(
         loadingAnimationListener = listener
     }
 
-    private var _buttonState: ButtonState by Delegates.observable(ButtonState.Completed) { _, _, new ->
+    private var buttonState: ButtonState by Delegates.observable(ButtonState.Completed) { _, _, new ->
         when (new) {
             ButtonState.Clicked -> textDisplay = textActive
             ButtonState.Loading -> textDisplay = textActive
@@ -100,15 +100,15 @@ class LoadingButton @JvmOverloads constructor(
     }
 
     override fun performClick(): Boolean {
-        _buttonState = when (_buttonState) {
+        buttonState = when (buttonState) {
             ButtonState.Completed -> ButtonState.Clicked
-            else -> _buttonState
+            else -> buttonState
         }
         return super.performClick()
     }
 
     fun animateTo(percentage: Int) {
-        _buttonState = ButtonState.Loading
+        buttonState = ButtonState.Loading
 
         if (percentage.toFloat() == targetPercentage) {
             loadingAnimationListener?.onTargetReached()
@@ -124,7 +124,7 @@ class LoadingButton @JvmOverloads constructor(
                 invalidate()
 
                 if (currentPercentage >= 100F) {
-                    _buttonState = ButtonState.Completed
+                    buttonState = ButtonState.Completed
                     return@addUpdateListener
                 }
 
@@ -137,7 +137,7 @@ class LoadingButton @JvmOverloads constructor(
     }
 
     fun reset() {
-        _buttonState = ButtonState.Completed
+        buttonState = ButtonState.Completed
     }
 
     fun interface LoadingAnimationListener {
